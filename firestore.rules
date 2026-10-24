@@ -1,0 +1,419 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Global Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isStoreOwnerMasterGate(storeId) {
+      return exists(/databases/$(database)/documents/stores/$(storeId)) &&
+        get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId == request.auth.uid;
+    }
+
+    // --- Validation Blueprints (Anti-Update-Gap) ---
+    function isValidStore(data) {
+      return data.keys().hasAll([
+          'ownerId', 'storeName', 'storeNameSi', 'currency', 'taxRate',
+          'paperWidth', 'language', 'receiptFooterEn', 'receiptFooterSi',
+          'autoPrint', 'showQrOnReceipt', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'storeName', 'storeNameSi', 'currency', 'taxRate',
+          'paperWidth', 'language', 'receiptFooterEn', 'receiptFooterSi',
+          'autoPrint', 'showQrOnReceipt', 'createdAt', 'updatedAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.storeName is string && data.storeName.size() >= 1 && data.storeName.size() <= 80 &&
+        data.storeNameSi is string && data.storeNameSi.size() <= 80 &&
+        data.currency is string && data.currency.size() == 3 &&
+        (data.currency == 'LKR' || data.currency == 'USD' || data.currency == 'EUR' || data.currency == 'GBP' || data.currency == 'INR') &&
+        data.taxRate is number && data.taxRate >= 0 && data.taxRate <= 100 &&
+        data.paperWidth is string && data.paperWidth.size() == 4 &&
+        (data.paperWidth == '58mm' || data.paperWidth == '80mm') &&
+        data.language is string && data.language.size() == 2 &&
+        (data.language == 'en' || data.language == 'si') &&
+        data.receiptFooterEn is string && data.receiptFooterEn.size() <= 160 &&
+        data.receiptFooterSi is string && data.receiptFooterSi.size() <= 160 &&
+        data.autoPrint is bool &&
+        data.showQrOnReceipt is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidStoreContact(data) {
+      return data.keys().hasAll([
+          'ownerId', 'storePhone', 'storeAddress', 'ownerEmail', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'storePhone', 'storeAddress', 'ownerEmail', 'createdAt', 'updatedAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.storePhone is string && data.storePhone.size() <= 32 &&
+        data.storeAddress is string && data.storeAddress.size() <= 160 &&
+        data.ownerEmail is string && data.ownerEmail.size() <= 120 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidProduct(data, storeId) {
+      return data.keys().hasAll([
+          'ownerId', 'storeId', 'name', 'nameSi', 'sku', 'qrCode', 'barcode',
+          'category', 'costPrice', 'sellingPrice', 'stockQty', 'minStockLevel',
+          'unit', 'isActive', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'storeId', 'name', 'nameSi', 'sku', 'qrCode', 'barcode',
+          'category', 'costPrice', 'sellingPrice', 'stockQty', 'minStockLevel',
+          'unit', 'isActive', 'createdAt', 'updatedAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.storeId is string && data.storeId.size() >= 1 && data.storeId.size() <= 128 &&
+        data.storeId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.storeId == storeId &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.nameSi is string && data.nameSi.size() <= 100 &&
+        data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 40 &&
+        data.sku.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.qrCode is string && data.qrCode.size() >= 6 && data.qrCode.size() <= 64 &&
+        data.qrCode.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.barcode is string && data.barcode.size() <= 64 &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 50 &&
+        data.costPrice is number && data.costPrice >= 0 && data.costPrice <= 100000000 &&
+        data.sellingPrice is number && data.sellingPrice >= 0 && data.sellingPrice <= 100000000 &&
+        data.stockQty is number && data.stockQty >= 0 && data.stockQty <= 1000000 &&
+        data.minStockLevel is number && data.minStockLevel >= 0 && data.minStockLevel <= 1000000 &&
+        data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 8 &&
+        (data.unit == 'pcs' || data.unit == 'kg' || data.unit == 'g' || data.unit == 'L' || data.unit == 'ml' || data.unit == 'pack' || data.unit == 'box') &&
+        data.isActive is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSale(data, storeId) {
+      return data.keys().hasAll([
+          'ownerId', 'storeId', 'invoiceNumber', 'subtotal', 'discountAmount',
+          'taxAmount', 'totalAmount', 'costTotal', 'amountPaid', 'changeDue',
+          'paymentMethod', 'itemCount', 'customerNote', 'cashierName', 'status',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'storeId', 'invoiceNumber', 'subtotal', 'discountAmount',
+          'taxAmount', 'totalAmount', 'costTotal', 'amountPaid', 'changeDue',
+          'paymentMethod', 'itemCount', 'customerNote', 'cashierName', 'status',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.storeId is string && data.storeId.size() >= 1 && data.storeId.size() <= 128 &&
+        data.storeId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.storeId == storeId &&
+        data.invoiceNumber is string && data.invoiceNumber.size() >= 3 && data.invoiceNumber.size() <= 40 &&
+        data.invoiceNumber.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.subtotal is number && data.subtotal >= 0 && data.subtotal <= 1000000000 &&
+        data.discountAmount is number && data.discountAmount >= 0 && data.discountAmount <= 1000000000 &&
+        data.taxAmount is number && data.taxAmount >= 0 && data.taxAmount <= 1000000000 &&
+        data.totalAmount is number && data.totalAmount >= 0 && data.totalAmount <= 1000000000 &&
+        data.costTotal is number && data.costTotal >= 0 && data.costTotal <= 1000000000 &&
+        data.amountPaid is number && data.amountPaid >= 0 && data.amountPaid <= 1000000000 &&
+        data.changeDue is number && data.changeDue >= 0 && data.changeDue <= 1000000000 &&
+        data.paymentMethod is string && data.paymentMethod.size() >= 2 && data.paymentMethod.size() <= 10 &&
+        (data.paymentMethod == 'cash' || data.paymentMethod == 'card' || data.paymentMethod == 'qr' || data.paymentMethod == 'credit') &&
+        data.itemCount is number && data.itemCount >= 1 && data.itemCount <= 200 &&
+        data.customerNote is string && data.customerNote.size() <= 60 &&
+        data.cashierName is string && data.cashierName.size() >= 1 && data.cashierName.size() <= 60 &&
+        data.status is string && data.status.size() >= 6 && data.status.size() <= 10 &&
+        (data.status == 'completed' || data.status == 'voided') &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSaleItem(data, storeId, saleId) {
+      return data.keys().hasAll([
+          'ownerId', 'storeId', 'saleId', 'productId', 'productName', 'productNameSi',
+          'sku', 'qrCode', 'quantity', 'unitPrice', 'costPrice', 'lineTotal', 'unit', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'storeId', 'saleId', 'productId', 'productName', 'productNameSi',
+          'sku', 'qrCode', 'quantity', 'unitPrice', 'costPrice', 'lineTotal', 'unit', 'createdAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.storeId is string && data.storeId.size() >= 1 && data.storeId.size() <= 128 &&
+        data.storeId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.storeId == storeId &&
+        data.saleId is string && data.saleId.size() >= 1 && data.saleId.size() <= 128 &&
+        data.saleId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.saleId == saleId &&
+        data.productId is string && data.productId.size() >= 1 && data.productId.size() <= 128 &&
+        data.productId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.productName is string && data.productName.size() >= 1 && data.productName.size() <= 100 &&
+        data.productNameSi is string && data.productNameSi.size() <= 100 &&
+        data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 40 &&
+        data.qrCode is string && data.qrCode.size() >= 6 && data.qrCode.size() <= 64 &&
+        data.quantity is number && data.quantity > 0 && data.quantity <= 100000 &&
+        data.unitPrice is number && data.unitPrice >= 0 && data.unitPrice <= 100000000 &&
+        data.costPrice is number && data.costPrice >= 0 && data.costPrice <= 100000000 &&
+        data.lineTotal is number && data.lineTotal >= 0 && data.lineTotal <= 1000000000 &&
+        data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 8 &&
+        data.createdAt is timestamp;
+    }
+
+    // --- Collection Match Blocks ---
+
+    // 1. Root Store Configuration (/stores/{storeId})
+    match /stores/{storeId} {
+      allow get: if isVerifiedUser() &&
+        isValidId(storeId) &&
+        storeId == request.auth.uid;
+
+      allow list: if false;
+
+      allow create: if isVerifiedUser() &&
+        isValidId(storeId) &&
+        storeId == request.auth.uid &&
+        isValidStore(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser() &&
+        isValidId(storeId) &&
+        isValidStore(incoming()) &&
+        storeId == request.auth.uid &&
+        existing().ownerId == request.auth.uid &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          // Action: SwitchLanguage
+          incoming().diff(existing()).affectedKeys().hasOnly(['language', 'updatedAt']) ||
+          // Action: UpdatePrinterPreferences
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'paperWidth', 'receiptFooterEn', 'receiptFooterSi', 'autoPrint', 'showQrOnReceipt', 'updatedAt'
+          ]) ||
+          // Action: UpdateStoreSettings
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'storeName', 'storeNameSi', 'currency', 'taxRate', 'paperWidth',
+            'language', 'receiptFooterEn', 'receiptFooterSi', 'autoPrint',
+            'showQrOnReceipt', 'updatedAt'
+          ])
+        );
+
+      allow delete: if false;
+
+      // 2. Split PII Contact Collection (/stores/{storeId}/private/{docId})
+      match /private/{docId} {
+        allow get: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(docId) &&
+          docId == 'contact' &&
+          storeId == request.auth.uid &&
+          isStoreOwnerMasterGate(storeId);
+
+        allow list: if false;
+
+        allow create: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(docId) &&
+          docId == 'contact' &&
+          storeId == request.auth.uid &&
+          isValidStoreContact(incoming()) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          (
+            isStoreOwnerMasterGate(storeId) ||
+            (
+              existsAfter(/databases/$(database)/documents/stores/$(storeId)) &&
+              getAfter(/databases/$(database)/documents/stores/$(storeId)).data.ownerId == request.auth.uid
+            )
+          );
+
+        allow update: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(docId) &&
+          isValidStoreContact(incoming()) &&
+          docId == 'contact' &&
+          storeId == request.auth.uid &&
+          existing().ownerId == request.auth.uid &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'storePhone', 'storeAddress', 'ownerEmail', 'updatedAt'
+          ]) &&
+          isStoreOwnerMasterGate(storeId);
+
+        allow delete: if false;
+      }
+
+      // 3. Store Products & QR Label Registry (/stores/{storeId}/products/{productId})
+      match /products/{productId} {
+        allow get: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(productId) &&
+          storeId == request.auth.uid &&
+          existing().ownerId == request.auth.uid &&
+          isStoreOwnerMasterGate(storeId);
+
+        // Cost-optimized Query Enforcer: zero get()/exists() calls inside list
+        allow list: if isVerifiedUser() &&
+          storeId == request.auth.uid &&
+          existing().ownerId == request.auth.uid;
+
+        allow create: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(productId) &&
+          storeId == request.auth.uid &&
+          isValidProduct(incoming(), storeId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          (
+            isStoreOwnerMasterGate(storeId) ||
+            (
+              existsAfter(/databases/$(database)/documents/stores/$(storeId)) &&
+              getAfter(/databases/$(database)/documents/stores/$(storeId)).data.ownerId == request.auth.uid
+            )
+          );
+
+        allow update: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(productId) &&
+          isValidProduct(incoming(), storeId) &&
+          storeId == request.auth.uid &&
+          existing().ownerId == request.auth.uid &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storeId == existing().storeId &&
+          incoming().qrCode == existing().qrCode &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            // Action 1: ScanRepriceAction (Instant QR Label Price Update)
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'sellingPrice', 'costPrice', 'updatedAt'
+            ]) ||
+            // Action 2: StockAdjustAction (POS Checkout Deduction / Restock)
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'stockQty', 'updatedAt'
+            ]) ||
+            // Action 3: EditProductDetailsAction (Catalog Update, qrCode stays immutable)
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'nameSi', 'sku', 'barcode', 'category', 'costPrice',
+              'sellingPrice', 'stockQty', 'minStockLevel', 'unit', 'isActive', 'updatedAt'
+            ])
+          ) &&
+          isStoreOwnerMasterGate(storeId);
+
+        allow delete: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(productId) &&
+          storeId == request.auth.uid &&
+          existing().ownerId == request.auth.uid &&
+          isStoreOwnerMasterGate(storeId);
+      }
+
+      // 4. POS Sales & Receipts (/stores/{storeId}/sales/{saleId})
+      match /sales/{saleId} {
+        allow get: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(saleId) &&
+          storeId == request.auth.uid &&
+          existing().ownerId == request.auth.uid &&
+          isStoreOwnerMasterGate(storeId);
+
+        // Cost-optimized Query Enforcer: zero get()/exists() calls inside list
+        allow list: if isVerifiedUser() &&
+          storeId == request.auth.uid &&
+          existing().ownerId == request.auth.uid;
+
+        allow create: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(saleId) &&
+          storeId == request.auth.uid &&
+          isValidSale(incoming(), storeId) &&
+          incoming().status == 'completed' &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          isStoreOwnerMasterGate(storeId);
+
+        // Terminal State Locking: Once 'voided', no subsequent updates are allowed
+        allow update: if isVerifiedUser() &&
+          isValidId(storeId) &&
+          isValidId(saleId) &&
+          isValidSale(incoming(), storeId) &&
+          storeId == request.auth.uid &&
+          existing().ownerId == request.auth.uid &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storeId == existing().storeId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          existing().status == 'completed' &&
+          incoming().status == 'voided' &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+          isStoreOwnerMasterGate(storeId);
+
+        allow delete: if false;
+
+        // 5. Atomic Sale Line Items (/stores/{storeId}/sales/{saleId}/items/{itemId})
+        match /items/{itemId} {
+          allow get: if isVerifiedUser() &&
+            isValidId(storeId) &&
+            isValidId(saleId) &&
+            isValidId(itemId) &&
+            storeId == request.auth.uid &&
+            existing().ownerId == request.auth.uid &&
+            isStoreOwnerMasterGate(storeId);
+
+          // Cost-optimized Query Enforcer
+          allow list: if isVerifiedUser() &&
+            isValidId(saleId) &&
+            storeId == request.auth.uid &&
+            existing().ownerId == request.auth.uid;
+
+          allow create: if isVerifiedUser() &&
+            isValidId(storeId) &&
+            isValidId(saleId) &&
+            isValidId(itemId) &&
+            storeId == request.auth.uid &&
+            isValidSaleItem(incoming(), storeId, saleId) &&
+            incoming().createdAt == request.time &&
+            isStoreOwnerMasterGate(storeId) &&
+            existsAfter(/databases/$(database)/documents/stores/$(storeId)/sales/$(saleId)) &&
+            getAfter(/databases/$(database)/documents/stores/$(storeId)/sales/$(saleId)).data.ownerId == request.auth.uid;
+
+          allow update: if false;
+          allow delete: if false;
+        }
+      }
+    }
+  }
+}

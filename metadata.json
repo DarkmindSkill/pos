@@ -1,0 +1,6 @@
+{
+  "name": "KadePOS — Cloud Retail POS & Inventory",
+  "description": "Bilingual Sinhala and English cloud POS system with 58mm thermal receipt printing, QR/barcode camera checkout, dynamic QR label generation, scan-to-reprice inventory management, and mobile sales dashboard.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

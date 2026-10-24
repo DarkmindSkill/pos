@@ -1,0 +1,504 @@
+{
+  "entities": {
+    "Store": {
+      "title": "Store",
+      "description": "Primary retail store configuration and POS terminal preferences owned by a single merchant.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the store owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "storeName": {
+          "type": "string",
+          "description": "Display name of the retail store in English.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "storeNameSi": {
+          "type": "string",
+          "description": "Display name of the retail store in Sinhala.",
+          "minLength": 0,
+          "maxLength": 80
+        },
+        "currency": {
+          "type": "string",
+          "description": "ISO currency code or display symbol.",
+          "enum": ["LKR", "USD", "EUR", "GBP", "INR"],
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "taxRate": {
+          "type": "number",
+          "description": "Default percentage tax or VAT rate between 0 and 100."
+        },
+        "paperWidth": {
+          "type": "string",
+          "description": "Thermal receipt printer roll width.",
+          "enum": ["58mm", "80mm"],
+          "minLength": 4,
+          "maxLength": 4
+        },
+        "language": {
+          "type": "string",
+          "description": "Default UI language code.",
+          "enum": ["en", "si"],
+          "minLength": 2,
+          "maxLength": 2
+        },
+        "receiptFooterEn": {
+          "type": "string",
+          "description": "English footer note printed at bottom of 58mm receipt.",
+          "minLength": 0,
+          "maxLength": 160
+        },
+        "receiptFooterSi": {
+          "type": "string",
+          "description": "Sinhala footer note printed at bottom of 58mm receipt.",
+          "minLength": 0,
+          "maxLength": 160
+        },
+        "autoPrint": {
+          "type": "boolean",
+          "description": "Whether to automatically open the 58mm print sheet after completing checkout."
+        },
+        "showQrOnReceipt": {
+          "type": "boolean",
+          "description": "Whether to render a verification QR code at the bottom of printed receipts."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the store was initialized."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the store configuration was last updated."
+        }
+      },
+      "required": [
+        "ownerId",
+        "storeName",
+        "storeNameSi",
+        "currency",
+        "taxRate",
+        "paperWidth",
+        "language",
+        "receiptFooterEn",
+        "receiptFooterSi",
+        "autoPrint",
+        "showQrOnReceipt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StoreContact": {
+      "title": "StoreContact",
+      "description": "Isolated PII contact details for the store printed on owner receipts.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the store owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "storePhone": {
+          "type": "string",
+          "description": "Store telephone number.",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "storeAddress": {
+          "type": "string",
+          "description": "Physical store street address.",
+          "minLength": 0,
+          "maxLength": 160
+        },
+        "ownerEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Owner email address.",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "ownerId",
+        "storePhone",
+        "storeAddress",
+        "ownerEmail",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Inventory item with immutable unique QR label identifier, barcode, stock level, and dynamic pricing.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the store owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "storeId": {
+          "type": "string",
+          "description": "Parent store document ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Product name in English.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "nameSi": {
+          "type": "string",
+          "description": "Product name in Sinhala.",
+          "minLength": 0,
+          "maxLength": 100
+        },
+        "sku": {
+          "type": "string",
+          "description": "Human-readable stock keeping unit code.",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "qrCode": {
+          "type": "string",
+          "description": "Immutable unique QR code payload printed on product labels.",
+          "minLength": 6,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "barcode": {
+          "type": "string",
+          "description": "Optional manufacturer 1D barcode (EAN/UPC/Code128).",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "category": {
+          "type": "string",
+          "description": "Inventory category label.",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "costPrice": {
+          "type": "number",
+          "description": "Unit purchase cost for margin calculation."
+        },
+        "sellingPrice": {
+          "type": "number",
+          "description": "Current retail selling price dynamically resolved on QR scan."
+        },
+        "stockQty": {
+          "type": "number",
+          "description": "Current stock quantity on hand."
+        },
+        "minStockLevel": {
+          "type": "number",
+          "description": "Reorder alert threshold."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Measurement unit.",
+          "enum": ["pcs", "kg", "g", "L", "ml", "pack", "box"],
+          "minLength": 1,
+          "maxLength": 8
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether product is active for POS checkout."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "ownerId",
+        "storeId",
+        "name",
+        "nameSi",
+        "sku",
+        "qrCode",
+        "barcode",
+        "category",
+        "costPrice",
+        "sellingPrice",
+        "stockQty",
+        "minStockLevel",
+        "unit",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Completed or voided POS invoice header for 58mm receipt printing and dashboard analytics.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the store owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "storeId": {
+          "type": "string",
+          "description": "Parent store document ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "invoiceNumber": {
+          "type": "string",
+          "description": "Formatted receipt number.",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Sum of line totals before discount and tax."
+        },
+        "discountAmount": {
+          "type": "number",
+          "description": "Total discount deducted from subtotal."
+        },
+        "taxAmount": {
+          "type": "number",
+          "description": "Tax amount added."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Final payable total."
+        },
+        "costTotal": {
+          "type": "number",
+          "description": "Total cost of goods sold for profit tracking."
+        },
+        "amountPaid": {
+          "type": "number",
+          "description": "Amount tendered by customer."
+        },
+        "changeDue": {
+          "type": "number",
+          "description": "Change returned to customer."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Settlement tender type.",
+          "enum": ["cash", "card", "qr", "credit"],
+          "minLength": 2,
+          "maxLength": 10
+        },
+        "itemCount": {
+          "type": "number",
+          "description": "Total number of line items in this sale."
+        },
+        "customerNote": {
+          "type": "string",
+          "description": "Optional non-sensitive customer reference label.",
+          "minLength": 0,
+          "maxLength": 60
+        },
+        "cashierName": {
+          "type": "string",
+          "description": "Display name of cashier.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "status": {
+          "type": "string",
+          "description": "Sale lifecycle state; voided is terminal.",
+          "enum": ["completed", "voided"],
+          "minLength": 6,
+          "maxLength": 10
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of checkout."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest status update."
+        }
+      },
+      "required": [
+        "ownerId",
+        "storeId",
+        "invoiceNumber",
+        "subtotal",
+        "discountAmount",
+        "taxAmount",
+        "totalAmount",
+        "costTotal",
+        "amountPaid",
+        "changeDue",
+        "paymentMethod",
+        "itemCount",
+        "customerNote",
+        "cashierName",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SaleItem": {
+      "title": "SaleItem",
+      "description": "Individual line item subcollection document belonging to a Sale.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the store owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "storeId": {
+          "type": "string",
+          "description": "Parent store document ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "saleId": {
+          "type": "string",
+          "description": "Parent sale document ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Referenced product document ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "productName": {
+          "type": "string",
+          "description": "Snapshot of English product name at time of sale.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "productNameSi": {
+          "type": "string",
+          "description": "Snapshot of Sinhala product name at time of sale.",
+          "minLength": 0,
+          "maxLength": 100
+        },
+        "sku": {
+          "type": "string",
+          "description": "Snapshot of product SKU.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "qrCode": {
+          "type": "string",
+          "description": "Snapshot of product unique QR code.",
+          "minLength": 6,
+          "maxLength": 64
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity sold."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "Unit selling price at checkout."
+        },
+        "costPrice": {
+          "type": "number",
+          "description": "Unit cost price at checkout."
+        },
+        "lineTotal": {
+          "type": "number",
+          "description": "Calculated quantity * unitPrice."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measure.",
+          "minLength": 1,
+          "maxLength": 8
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of sale."
+        }
+      },
+      "required": [
+        "ownerId",
+        "storeId",
+        "saleId",
+        "productId",
+        "productName",
+        "productNameSi",
+        "sku",
+        "qrCode",
+        "quantity",
+        "unitPrice",
+        "costPrice",
+        "lineTotal",
+        "unit",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/stores/{storeId}": {
+      "schema": "Store",
+      "description": "Root store configuration document keyed by owner UID."
+    },
+    "/stores/{storeId}/private/{docId}": {
+      "schema": "StoreContact",
+      "description": "Split private subcollection storing store phone, physical address, and owner email."
+    },
+    "/stores/{storeId}/products/{productId}": {
+      "schema": "Product",
+      "description": "Store inventory items with unique QR identifiers and dynamic cloud pricing."
+    },
+    "/stores/{storeId}/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "POS sale headers and receipt summaries."
+    },
+    "/stores/{storeId}/sales/{saleId}/items/{itemId}": {
+      "schema": "SaleItem",
+      "description": "Atomic line items belonging to a POS sale."
+    }
+  }
+}
